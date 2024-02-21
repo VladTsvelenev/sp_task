@@ -17,11 +17,7 @@ from cData import ImageDataset
 
 transform1 = transforms.Compose([          
             transforms.ToTensor(),
-            transforms.Resize([150, 150]),              
-            transforms.Normalize(                     
-            mean=[0.485, 0.456, 0.406],              
-            std=[0.229, 0.224, 0.225]                 
-            )])
+            transforms.Resize([150, 150])])
 
 train_data = ImageDataset(annotations_file = 'tab3.csv', img_dir = 'test_data', transform=transform1)
 train_size = int(len(train_data) * 0.8)
@@ -37,15 +33,15 @@ class ConvNet(nn.Module):
     def __init__(self):
         super().__init__()
         #150*150*3
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=8, kernel_size=(3,3))
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=(3,3))
         self.pool1 = nn.MaxPool2d(kernel_size=(2,2))
-        self.conv2 = nn.Conv2d(in_channels=8, out_channels=16, kernel_size=(3,3)) 
+        self.conv2 = nn.Conv2d(in_channels=6, out_channels=9, kernel_size=(3,3)) 
         self.pool2 = nn.MaxPool2d(kernel_size=(2,2))
-        self.conv3 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3,3))
+        self.conv3 = nn.Conv2d(in_channels=9, out_channels=12, kernel_size=(3,3))
         self.pool3 = nn.MaxPool2d(kernel_size=(2,2))
         self.flatten = nn.Flatten()
         self.drop = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(9248, 512)
+        self.fc1 = nn.Linear(12*17*17, 512)
         self.fc2 = nn.Linear(512, 4)
 
     
@@ -95,7 +91,7 @@ def evaluate(model, dataloader, loss_fn):
     return accuracy, np.mean(losses)
 
 
-def train(model, loss_fn, optimizer, n_epoch=3):
+def train(model, loss_fn, optimizer, n_epoch=5):
 
     # цикл обучения сети
     for epoch in range(n_epoch):
@@ -134,8 +130,6 @@ def create_model(model, num_freeze_layers, num_out_classes):
 
     return model
 
-
-#model = create_model(models.resnet18(pretrained=True), 9, 4)
 model = ConvNet()
 loss_fn = torch.nn.CrossEntropyLoss()
 
