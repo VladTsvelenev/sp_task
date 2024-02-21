@@ -24,9 +24,7 @@ transform1 = transforms.Compose([
             )])
 
 train_data = ImageDataset(annotations_file = 'tab3.csv', img_dir = 'test_data', transform=transform1)
-# в тренировочную выборку отнесем 80% всех картинок
 train_size = int(len(train_data) * 0.8)
-# в валидационную — остальные 20%
 test_size = len(train_data) - train_size
 
 train_data, test_data = torch.utils.data.random_split(train_data, [train_size, test_size])
@@ -76,12 +74,12 @@ def evaluate(model, dataloader, loss_fn):
     losses = []
 
     num_correct = 0
-    num_elements = len(dataloader)
+    num_elements = 0
 
     for i, batch in enumerate(dataloader):
         
         X_batch, y_batch = batch
-        
+        num_elements += y_batch.size(0)
         with torch.no_grad():
             logits = model(X_batch.to(device))
             
