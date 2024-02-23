@@ -11,8 +11,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import accuracy_score 
 import csv
+import warnings 
 
 os.chdir(os.getcwd())
+warnings.filterwarnings('ignore')
 from cData import ImageDataset
 
 transform1 = transforms.Compose([          
@@ -41,8 +43,9 @@ class ConvNet(nn.Module):
         self.pool3 = nn.MaxPool2d(kernel_size=(2,2))
         self.flatten = nn.Flatten()
         self.drop = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(12*17*17, 512)
-        self.fc2 = nn.Linear(512, 4)
+        self.fc1 = nn.Linear(12*17*17, 1024)
+        self.fc2 = nn.Linear(1024, 512)
+        self.fc3 = nn.Linear(512, 4)
 
     
     def forward(self, x):
@@ -57,7 +60,8 @@ class ConvNet(nn.Module):
         x = self.flatten(x)
         x = self.drop(x)
         x = F.relu(self.fc1(x))
-        x = F.log_softmax(self.fc2(x), dim = 1)
+        x = F.relu(self.fc2(x))
+        x = F.log_softmax(self.fc3(x), dim = 1)
         
         return x
     
@@ -96,8 +100,6 @@ def train(model, loss_fn, optimizer, n_epoch=5):
     # цикл обучения сети
     for epoch in range(n_epoch):
 
-        print("Epoch:", epoch+1)
-
         model.train(True)
 
         running_losses = []
@@ -117,6 +119,7 @@ def train(model, loss_fn, optimizer, n_epoch=5):
             train_accuracy = torch.sum(y_batch == model_answers.cpu()) / len(y_batch)
             running_accuracies.append(train_accuracy)
         model.train(False)
+        print("Epoch:", str(epoch+1) + ", accuracy:", (sum(running_accuracies) * 100 / len(running_accuracies)).numpy())
         
     return model
 
@@ -138,10 +141,10 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
-model = train(model, loss_fn, optimizer, n_epoch=5)
+model = train(model, loss_fn, optimizer, n_epoch=10)
 
 train_accuracy, _ = evaluate(model, train_loader, loss_fn)
-print('Train accuracy:', train_accuracy)
+print('Train accuracy:', train_accuracy.numpy())
 
 test_accuracy, _ = evaluate(model, test_loader, loss_fn)
-print('Test accuracy:', test_accuracy)
+print('Test accuracy:', test_accuracy.numpy())
