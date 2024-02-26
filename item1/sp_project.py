@@ -71,7 +71,7 @@ class ConvNet(nn.Module):
         x = self.drop(x)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        x = F.softmax(self.fc3(x), dim = 1)
+        x = F.log_softmax(self.fc3(x), dim = 1)
         return x
 
 def evaluate(model, dataloader, loss_fn):
