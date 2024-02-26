@@ -21,7 +21,7 @@ transform1 = transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize([150, 150])])
 
-train_data = ImageDataset(annotations_file = 'tab3.csv', img_dir = 'test_data', transform=transform1)
+train_data = ImageDataset(annotations_file = 'table.csv', img_dir = 'test_data', transform=transform1)
 train_size = int(len(train_data) * 0.8)
 test_size = len(train_data) - train_size
 
@@ -63,9 +63,6 @@ class ConvNet(nn.Module):
         
         return x
     
-
-
-
 
 def evaluate(model, dataloader, loss_fn):
     
@@ -118,15 +115,6 @@ def train(model, loss_fn, optimizer, n_epoch=5):
         
     return model
 
-def create_model(model, num_freeze_layers, num_out_classes):
-    model.fc = nn.Linear(512, num_out_classes)
-
-    for i, layer in enumerate(model.children()):
-        if i < num_freeze_layers:
-            for param in layer.parameters():
-                param.requires_grad = False
-
-    return model
 
 model = ConvNet()
 loss_fn = torch.nn.CrossEntropyLoss()
