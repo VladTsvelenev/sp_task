@@ -91,6 +91,7 @@ def evaluate(model, dataloader, loss_fn):
 def train(model, loss_fn, optimizer, n_epoch=5):
 
     # цикл обучения сети
+    maxaccuracy = 0
     for epoch in range(n_epoch):
 
         model.train(True)
@@ -111,8 +112,11 @@ def train(model, loss_fn, optimizer, n_epoch=5):
             running_accuracies.append(train_accuracy)
             
         model.train(False)
-        print("Epoch:", str(epoch+1) + ", accuracy:", (sum(running_accuracies) * 100 / len(running_accuracies)).numpy())
-        
+        accuracy = (sum(running_accuracies) * 100 / len(running_accuracies)).numpy()
+        print("Epoch:", str(epoch+1) + ", accuracy:", accuracy)
+        if accuracy >= maxaccuracy:
+            torch.save(model.state_dict(), './model.pt')
+            maxaccuracy = accuracy
     return model
 
 
@@ -126,6 +130,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 model = train(model, loss_fn, optimizer, n_epoch=10)
 
+model.load_state_dict(torch.load('model.pt'))
 train_accuracy, _ = evaluate(model, train_loader, loss_fn)
 print('Train accuracy:', train_accuracy.numpy())
 
