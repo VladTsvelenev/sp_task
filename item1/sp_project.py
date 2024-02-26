@@ -99,8 +99,6 @@ def evaluate(model, dataloader, loss_fn):
 
 
 def train(model, loss_fn, optimizer, n_epoch, load):
-
-    # цикл обучения сети
     for epoch in range(n_epoch):
 
         model.train(True)
