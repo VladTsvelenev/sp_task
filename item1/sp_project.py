@@ -99,6 +99,7 @@ def evaluate(model, dataloader, loss_fn):
 
 
 def train(model, loss_fn, optimizer, n_epoch, load):
+    maxaccuracy = 0
     for epoch in range(n_epoch):
 
         model.train(True)
@@ -120,14 +121,18 @@ def train(model, loss_fn, optimizer, n_epoch, load):
             running_accuracies.append(train_accuracy)
             
         model.train(False)
-        print("Epoch:", str(epoch+1) + ", accuracy:", (sum(running_accuracies) * 100 / len(running_accuracies)).numpy())
+        accuracy = (sum(running_accuracies) * 100 / len(running_accuracies)).numpy()
+        print("Epoch:", str(epoch+1) + ", accuracy:", accuracy)
+        if accuracy >= maxaccuracy:
+            torch.save(model.state_dict(), './model.pt')
+            maxaccuracy = accuracy
         
     return model
 
 def create_model(model, num_freeze_layers, num_out_classes):
     # замена последнего слоя сети
     model.fc3 = nn.Linear(512, num_out_classes)
-
+    model.load_state_dict(checkpoint)
     # заморозка слоев
     for i, layer in enumerate(model.children()):
         if i < num_freeze_layers:
@@ -138,17 +143,20 @@ def create_model(model, num_freeze_layers, num_out_classes):
 
 model = ConvNet()
 loss_fn = torch.nn.CrossEntropyLoss()
+learning_rate = 1e-3
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 model = train(model, loss_fn, optimizer, 10, train_loader)
+model.load_state_dict(torch.load('model.pt'))
 
 model = create_model(model, 3, 5)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-model = train(model, loss_fn, optimizer, 10, train_loaderD)
-train_accuracy, _ = evaluate(model, train_loaderD, loss_fn)
+model = train(model, loss_fn, optimizer, 20, train_loaderD)
+model.load_state_dict(torch.load('model.pt'))
 
+train_accuracy, _ = evaluate(model, train_loaderD, loss_fn)
 print('Train accuracy:', train_accuracy.numpy())
 
 test_accuracy, _ = evaluate(model, test_loaderD, loss_fn)
