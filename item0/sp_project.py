@@ -89,8 +89,6 @@ def evaluate(model, dataloader, loss_fn):
 
 
 def train(model, loss_fn, optimizer, n_epoch=5):
-
-    # цикл обучения сети
     maxaccuracy = 0
     for epoch in range(n_epoch):
 
