@@ -126,7 +126,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
-model = train(model, loss_fn, optimizer, n_epoch=10)
+model = train(model, loss_fn, optimizer, n_epoch=20)
 
 model.load_state_dict(torch.load('model.pt'))
 train_accuracy, _ = evaluate(model, train_loader, loss_fn)
