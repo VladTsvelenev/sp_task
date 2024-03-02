@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отправка изображения</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        h2 {
+            margin-bottom: 20px;
+            margin-top: 0;
+        }
+        #image-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #image-input {
+            background-color: gray;
+            margin-bottom: 10px;
+        }
+        #image-preview {
+            max-width: 100%;
+            margin-top: 10px;
+        }
+        #image-preview img, #image-preview p {
+            width: 250px;
+            height: 250px;
+            text-align: center;
+            line-height: 50px;
+        }
+        input[type="file"], button {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h2>Отправка изображения</h2>
+    <form id="image-form" action="/upload" method="post" enctype="multipart/form-data">
+        <label for="image-input">Выберите изображение</label>
+        <input type="file" name="image" id="image-input" accept="image/*" required>
+        <button type="button" onclick="submitForm()">Отправить изображение</button>
+    </form>
+    <div id="image-preview"></div>
+
+    <script>
+        function submitForm() {
+            var preview = document.getElementById('image-preview');
+            preview.innerHTML = '';
+
+            var fileInput = document.getElementById('image-input');
+            var file = fileInput.files[0];
+            if (file) {
+                var formData = new FormData();
+                formData.append('image', file);
+
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    showText(data.text); // передача текста в функцию showText()
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            showText();
+            document.getElementById('image-form').reset();
+        }
+
+        function showText(text) {
+            var preview = document.getElementById('image-preview');
+            preview.innerHTML = '';
+            var textElement = document.createElement('p');
+            textElement.innerText = text;
+            preview.appendChild(textElement);
+        }
+
+        document.getElementById('image-input').addEventListener('change', function (event) {
+            var preview = document.getElementById('image-preview');
+            preview.innerHTML = '';
+            var file = event.target.files[0];
+
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var img = document.createElement('img');
+                    img.src = e.target.result;
+                    preview.appendChild(img);
+                }
+                reader.readAsDataURL(file);
+            } else {
+                showText('Hello'); // вызов функции showText(), если изображение не выбрано
+            }
+        });
+    </script>
+</body>
+</html>
