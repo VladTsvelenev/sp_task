@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, url_for, send_from_directory
 import numpy as np
 from PIL import Image
 import torch
@@ -8,8 +8,12 @@ from torchvision import transforms
 from torchvision.transforms import v2
 import warnings 
 import os
+from captum.attr import IntegratedGradients
+from captum.attr import visualization as viz
+from matplotlib.colors import LinearSegmentedColormap
 
 warnings.filterwarnings('ignore')
+
 
 class ConvNet(nn.Module):
     def __init__(self):
@@ -26,7 +30,6 @@ class ConvNet(nn.Module):
         self.fc1 = nn.Linear(12*17*17, 1024)
         self.fc2 = nn.Linear(1024, 512)
         self.fc3 = nn.Linear(512, 5)
-
     
     def forward(self, x):
 
@@ -43,21 +46,31 @@ class ConvNet(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.log_softmax(self.fc3(x), dim = 1)
         return x
-
+    
+    
 def Classify(name):
     image = Image.open(name)
-
-    transform1 = transforms.Compose([         
+    transform_tens = transforms.Compose([         
             v2.ToTensor(),
             v2.Resize([150, 150])])
-
-    image_transformed = transform1(image)
+    transform_norm = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+    image_transformed = transform_tens(image)
     model = ConvNet()
     model.load_state_dict(torch.load('test.pt'))
     model.eval()
     with torch.no_grad():
         model_output = model(image_transformed.reshape((1, 3, 150, 150)))
-
+    norm_img = transform_norm(image_transformed).unsqueeze(0)
+    integrated_gradients = IntegratedGradients(model)
+    im_at = integrated_gradients.attribute(norm_img, target=3, n_steps=200)
+    map = LinearSegmentedColormap.from_list('custom blue', [(0, '#ffffff'), (0.25, '#0000ff'), (1, '#0000ff')], N=256)
+    figure, axis = viz.visualize_image_attr(np.transpose(im_at.squeeze().cpu().detach().numpy(), (1,2,0)),
+                                np.transpose(image_transformed.squeeze().cpu().detach().numpy(), (1,2,0)),
+                                method='heat_map', cmap=map, use_pyplot=False)
+    figure.savefig('upload/im.jpg', bbox_inches = 'tight', pad_inches = 0)
     return dictionary[np.argmax(model_output.data.cpu().numpy())]
 
  
@@ -78,16 +91,19 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 def index():
     return render_template('index.html')
 
-
-
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'image' in request.files:
         file = request.files['image']
         filename = os.path.join(app.config['UPLOAD_FOLDER'], 'im.jpg')
         file.save(filename)
-        return jsonify({'text': Classify('upload/im.jpg'), 'filename': file.filename})
+        image_url = url_for('uploaded_file', filename='im.jpg')
+        return jsonify({'text': Classify('upload/im.jpg'), 'image': image_url})
     return jsonify({'error': 'No image provided'})
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     app.run(debug=True)

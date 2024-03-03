@@ -12,6 +12,7 @@ numpy = "^1.26.4"
 torch = "^2.2.1"
 torchvision = "^0.17.1"
 gunicorn = "^21.2.0"
+captum = "^0.7.0"
 
 
 [build-system]
