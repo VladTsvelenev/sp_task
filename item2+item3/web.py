@@ -66,7 +66,7 @@ def Classify(name):
     norm_img = transform_norm(image_transformed).unsqueeze(0)
     integrated_gradients = IntegratedGradients(model)
     im_at = integrated_gradients.attribute(norm_img, target=3, n_steps=200)
-    map = LinearSegmentedColormap.from_list('custom blue', [(0, '#ffffff'), (0.25, '#0000ff'), (1, '#0000ff')], N=256)
+    map = LinearSegmentedColormap.from_list('custom blue', [(0, '#000000'), (0.3, '#0000ff'), (1, '#0000ff')], N=256)
     figure, axis = viz.visualize_image_attr(np.transpose(im_at.squeeze().cpu().detach().numpy(), (1,2,0)),
                                 np.transpose(image_transformed.squeeze().cpu().detach().numpy(), (1,2,0)),
                                 method='heat_map', cmap=map, use_pyplot=False)
