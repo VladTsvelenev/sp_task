@@ -15,7 +15,6 @@ from ConvNetF import ConvNet
 os.chdir(os.getcwd())
 warnings.filterwarnings('ignore')
 
-
 def evaluate(model, dataloader, loss_fn):
 
     losses = []
@@ -42,20 +41,16 @@ def evaluate(model, dataloader, loss_fn):
 
 def train(model, loss_fn, optimizer, n_epoch, load, val):
     num_iter = 0
-    minloss = 0
+    minloss = 200
     for epoch in range(n_epoch):
-
         model.train(True)
-
         running_losses = []
         running_accuracies = []
         for i, batch in enumerate(load):
             X_batch, y_batch = batch
             logits = model(X_batch.to(device))
-
             loss = loss_fn(logits, y_batch.to(device))
             running_losses.append(loss.item())
-
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -64,9 +59,7 @@ def train(model, loss_fn, optimizer, n_epoch, load, val):
                 y_batch == model_answers.cpu()) / len(y_batch)
             running_accuracies.append(train_accuracy)
             num_iter += 1
-
         val_accuracy, val_loss = evaluate(model, val, loss_fn=loss_fn)
-
         model.train(False)
         accuracy = (sum(running_accuracies) * 100 /
                     len(running_accuracies)).numpy()
@@ -74,18 +67,17 @@ def train(model, loss_fn, optimizer, n_epoch, load, val):
         print("Epoch:", str(epoch+1))
         print("Train | accuracy:", accuracy, ", loss:", losst)
         print("Validation | accuracy:", val_accuracy.numpy()
-              * 100, ", loss:", val_loss)
+              * 100, ", loss:", val_loss * 100)
         print("__________________________________________________________")
         if val_loss <= minloss:
-            torch.save(model.state_dict(), './model.pt')
+            torch.save(model.state_dict(), 'best.pt')
             minloss = val_loss
-
     return model
 
 
 def create_model(model, num_freeze_layers, num_out_classes):
+    model.load_state_dict(torch.load('best.pt'))
     model.fc3 = nn.Linear(512, num_out_classes)
-    model.load_state_dict(torch.load('model.pt'))
     for i, layer in enumerate(model.children()):
         if i < num_freeze_layers:
             for param in layer.parameters():
@@ -166,8 +158,9 @@ model = train(model, loss_fn, optimizer, 10, train_loader, test_loader)
 
 model = create_model(model, 3, 5)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-model = train(model, loss_fn, optimizer, 20, train_loaderD, test_loader)
-model.load_state_dict(torch.load('model.pt'))
+model = train(model, loss_fn, optimizer, 20, train_loaderD, val_loaderD)
+
+model.load_state_dict(torch.load('best.pt'))
 
 train_accuracy, _ = evaluate(model, train_loaderD, loss_fn)
 print('Train accuracy:', train_accuracy.numpy())
