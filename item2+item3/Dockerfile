@@ -9,7 +9,7 @@ RUN pip install poetry
 COPY pyproject.toml poetry.lock /app/
 RUN poetry config virtualenvs.create false \
     && poetry install --no-root --no-interaction --no-ansi
-RUN mkdir /app/upload
+
 COPY web.py /app/
 COPY test.pt /app/
 COPY templates /app/templates

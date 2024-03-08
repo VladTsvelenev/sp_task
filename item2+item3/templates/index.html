@@ -76,13 +76,13 @@
             showText('Loading...');
             var preview = document.getElementById('image-preview');
             preview.innerHTML = '';
-    
+
             var fileInput = document.getElementById('image-input');
             var file = fileInput.files[0];
             if (file) {
                 var formData = new FormData();
                 formData.append('image', file);
-    
+
                 fetch('/upload', {
                     method: 'POST',
                     body: formData
@@ -90,37 +90,33 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log(data);
-                    showText(data.text);
-                    showImage(data.image);
+                    showText(data.result_text);
+                    showImage('data:image/png;base64,' + data.result_image_base64);
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    showText('Error occurred. Please try again.');
                 });
             } else {
                 showText('Waiting for image');
             }
             document.getElementById('image-form').reset();
         }
-    
-        function showText(text) {
-            var resultText = document.getElementById('result-text');
-            resultText.innerHTML = text;
-        }
-    
         function showImage(imageSrc) {
             var preview = document.getElementById('image-preview');
             preview.innerHTML = '';
             
             if (imageSrc) {
-                imageSrc += '?rand=' + Math.random();
-
                 var img = document.createElement('img');
                 img.src = imageSrc;
                 preview.appendChild(img);
             }
         }
-
-    
+        
+        function showText(text) {
+            var resultText = document.getElementById('result-text');
+            resultText.innerHTML = text;
+        }
         document.getElementById('image-input').addEventListener('change', function (event) {
             var preview = document.getElementById('image-preview');
             preview.innerHTML = '';
@@ -136,7 +132,7 @@
                 }
                 reader.readAsDataURL(file);
             } else {
-                showText('Waiting for image');
+                showText('Hello');
             }
         });
     </script>

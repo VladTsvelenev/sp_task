@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, url_for, send_from_directory
+from flask import Flask, request, jsonify, render_template
 import numpy as np
 from PIL import Image
 import torch
@@ -6,11 +6,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import transforms
 from torchvision.transforms import v2
-import warnings 
-import os
 from captum.attr import IntegratedGradients
 from captum.attr import visualization as viz
 from matplotlib.colors import LinearSegmentedColormap
+import warnings 
+import io
+import base64
 
 warnings.filterwarnings('ignore')
 
@@ -46,10 +47,10 @@ class ConvNet(nn.Module):
         x = F.relu(self.fc2(x))
         x = F.log_softmax(self.fc3(x), dim = 1)
         return x
+
     
-    
-def Classify(name):
-    image = Image.open(name)
+def classify_image(image):
+    global model
     transform_tens = transforms.Compose([         
             v2.ToTensor(),
             v2.Resize([150, 150])])
@@ -58,34 +59,32 @@ def Classify(name):
         std=[0.229, 0.224, 0.225]
     )
     image_transformed = transform_tens(image)
-    model = ConvNet()
-    model.load_state_dict(torch.load('test.pt'))
-    model.eval()
     with torch.no_grad():
         model_output = model(image_transformed.reshape((1, 3, 150, 150)))
     norm_img = transform_norm(image_transformed).unsqueeze(0)
     integrated_gradients = IntegratedGradients(model)
     im_at = integrated_gradients.attribute(norm_img, target=3, n_steps=200)
     map = LinearSegmentedColormap.from_list('custom blue', [(0, '#000000'), (0.3, '#0000ff'), (1, '#0000ff')], N=256)
-    figure, axis = viz.visualize_image_attr(np.transpose(im_at.squeeze().cpu().detach().numpy(), (1,2,0)),
+    figure, _ = viz.visualize_image_attr(np.transpose(im_at.squeeze().cpu().detach().numpy(), (1,2,0)),
                                 np.transpose(image_transformed.squeeze().cpu().detach().numpy(), (1,2,0)),
                                 method='heat_map', cmap=map, use_pyplot=False)
-    figure.savefig('upload/im.jpg', bbox_inches = 'tight', pad_inches = 0)
-    return dictionary[np.argmax(model_output.data.cpu().numpy())]
+    result_image = io.BytesIO()
+    figure.savefig(result_image, format='png', bbox_inches='tight', pad_inches=0)
+    result_image.seek(0)
+    result_text = dictionary[np.argmax(model_output.data.cpu().numpy())]
+    return result_image, result_text
 
- 
-dictionary = {0: 'Jeans',
-              1: 'Sofa',
-              2: 'T-shirt',
-              3: 'Television',
-              4: 'Other'}
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
 
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = 'upload'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+dictionary = {0: 'Jeans', 1: 'Sofa', 2: 'T-shirt', 3: 'Television', 4: 'Other'}
+model = ConvNet()
+model.load_state_dict(torch.load('test.pt'))
+model.eval()  
 
 @app.route('/')
 def index():
@@ -95,15 +94,16 @@ def index():
 def upload():
     if 'image' in request.files:
         file = request.files['image']
-        filename = os.path.join(app.config['UPLOAD_FOLDER'], 'im.jpg')
-        file.save(filename)
-        image_url = url_for('uploaded_file', filename='im.jpg')
-        return jsonify({'text': Classify('upload/im.jpg'), 'image': image_url})
-    return jsonify({'error': 'No image provided'})
+        
+        if file and allowed_file(file.filename):
+            image = Image.open(file)
+            result_image, result_text = classify_image(image)
+            result_image_base64 = base64.b64encode(result_image.read()).decode()
+            return jsonify({'result_text': result_text, 'result_image_base64': result_image_base64})
+        else:
+            return jsonify({'error': 'Invalid image file'})
 
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    return jsonify({'error': 'No image provided'})
 
 if __name__ == '__main__':
     app.run(debug=True)
